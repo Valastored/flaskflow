@@ -17,9 +17,10 @@ signal notice(text: String)
 ## false = Google TEST ads (always use this while developing!).
 ## true  = your real ad units below. Must match is_real in
 ##         addons/AdmobPlugin/android_export.cfg.
-const USE_REAL_ADS := false
-const REAL_INTERSTITIAL_ID := "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX"
-const REAL_REWARDED_ID := "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX"
+const USE_REAL_ADS := true
+const REAL_APP_ID := "ca-app-pub-4767027922543682~8439244593"
+const REAL_INTERSTITIAL_ID := "ca-app-pub-4767027922543682/6517282122"
+const REAL_REWARDED_ID := "ca-app-pub-4767027922543682/9093850714"
 
 ## Product ID created in Play Console (Monetize > Products > In-app products).
 const REMOVE_ADS_PRODUCT := "remove_ads"
@@ -65,6 +66,7 @@ func _setup_admob() -> void:
 	_admob = Admob.new()
 	_admob.is_real = USE_REAL_ADS
 	if USE_REAL_ADS:
+		_admob.android_real_application_id = REAL_APP_ID
 		_admob.android_real_interstitial_id = REAL_INTERSTITIAL_ID
 		_admob.android_real_rewarded_id = REAL_REWARDED_ID
 	# max_ad_content_rating defaults to G (family-friendly ads only).
