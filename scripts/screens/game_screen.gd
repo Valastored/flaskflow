@@ -1,7 +1,11 @@
 extends Control
 ## One level: tubes, move counter with a limit, stars, undo, restart.
 
-const POUR_TIME := 0.28
+const MOVE_TIME := 0.16    # source tube flies over the target
+const POUR_TIME := 0.30    # liquid flows
+const RETURN_TIME := 0.16  # source tube goes back
+const TOTAL_POUR := MOVE_TIME + POUR_TIME + RETURN_TIME
+const TILT := deg_to_rad(62.0)
 const START_UNDOS := 3
 const MAX_PER_ROW := 6
 
@@ -21,6 +25,8 @@ var _stars_preview: StarsView
 var _undo_btn: Button
 var _tubes_box: VBoxContainer
 var _overlay: Control
+var _fx: FxLayer
+var _busy := 0  # pours currently animating
 
 
 func _init(main, p_level_index: int) -> void:
@@ -30,6 +36,10 @@ func _init(main, p_level_index: int) -> void:
 
 func _ready() -> void:
 	_build_ui()
+	_fx = FxLayer.new()
+	_fx.z_index = 50
+	add_child(_fx)
+	UI.full_rect(_fx)
 	_load_level()
 
 
@@ -44,6 +54,7 @@ func _load_level() -> void:
 	finished = false
 	extra_moves_used = false
 	_selected = -1
+	_busy = 0
 	if _overlay:
 		_overlay.queue_free()
 		_overlay = null
@@ -123,12 +134,13 @@ func _build_tubes() -> void:
 		v.tapped.connect(_on_tube_tapped)
 		row.add_child(v)
 		_views.append(v)
+		v.drop_in(0.05 + i * 0.04)
 
 
 # ---------------------------------------------------------------- input
 
 func _on_tube_tapped(i: int) -> void:
-	if finished:
+	if finished or _busy > 0:
 		return
 	if _selected == -1:
 		_try_select(i)
@@ -166,24 +178,67 @@ func play_move(from: int, to: int) -> bool:
 
 
 func _do_pour(from: int, to: int) -> void:
-	var color := board.top_color(from)
+	var color := Palette.liquid(board.top_color(from))
+	var level_before := (board.tubes[to] as Array).size()
 	var k := board.pour(from, to)
 	_selected = -1
-	var src := _views[from]
-	var dst := _views[to]
-	src.set_selected(false)
-	src.set_layers(board.tubes[from], false)
-	src.play_drain(Palette.liquid(color), k, POUR_TIME)
-	dst.set_layers(board.tubes[to], board.is_tube_complete(to))
-	dst.play_fill(k, POUR_TIME)
-	if board.is_tube_complete(to):
-		dst.play_complete()
 	_refresh_hud()
 	_check_end()
 
+	var src := _views[from]
+	var dst := _views[to]
+	src.set_selected(false)
+	src.z_index = 20
+	_busy += 1
+
+	# Fly the source next to the target mouth, tilted towards it.
+	var dir := 1.0 if dst.global_position.x >= src.global_position.x else -1.0
+	var target_pivot := dst.mouth_global_rest() \
+		+ Vector2(-dir * src.size.x * 0.45, -src.size.y * 0.30)
+	var fly := target_pivot - src.mouth_global_rest()
+
+	var tw := src.create_tween().set_parallel(true)
+	tw.tween_property(src, "fly_offset", fly, MOVE_TIME) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(src, "tilt", dir * TILT, MOVE_TIME) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_callback(func():
+		src.set_layers(board.tubes[from], board.is_tube_complete(from))
+		src.play_drain(color, k, POUR_TIME)
+		dst.set_layers(board.tubes[to], board.is_tube_complete(to))
+		dst.play_fill(k, POUR_TIME)
+		_fx.start_stream(src.lip_global(dir), dst.surface_global(level_before),
+			color, 12.0, POUR_TIME))
+	tw.tween_interval(POUR_TIME)
+	tw.chain().tween_property(src, "fly_offset", Vector2.ZERO, RETURN_TIME) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(src, "tilt", 0.0, RETURN_TIME)
+	tw.chain().tween_callback(func(): _after_pour(from, to, color))
+
+
+func _after_pour(from: int, to: int, color: Color) -> void:
+	_busy = maxi(_busy - 1, 0)
+	var src := _views[from]
+	var dst := _views[to]
+	src.z_index = 0
+	src.set_layers(board.tubes[from], board.is_tube_complete(from))
+	dst.set_layers(board.tubes[to], board.is_tube_complete(to))
+	if board.is_tube_complete(to):
+		dst.play_complete()
+		_fx.sparkle(dst.mouth_global_rest(), color)
+	if board.is_solved() and _busy == 0:
+		_celebrate()
+
+
+func _celebrate() -> void:
+	_fx.confetti()
+	for i in _views.size():
+		if not (board.tubes[i] as Array).is_empty():
+			_views[i].bounce(0.2, i * 0.06)
+
 
 func _on_undo() -> void:
-	if finished:
+	if finished or _busy > 0:
 		return
 	if undos_left <= 0:
 		Ads.show_rewarded(func(ok: bool):
@@ -230,15 +285,15 @@ func _check_end() -> void:
 		finished = true
 		var stars := current_stars()
 		GameState.record_result(level_index, stars)
-		get_tree().create_timer(POUR_TIME + 0.35).timeout.connect(
+		get_tree().create_timer(TOTAL_POUR + 0.9).timeout.connect(
 			func(): _show_win(stars))
 	elif board.moves >= move_limit:
 		finished = true
-		get_tree().create_timer(POUR_TIME + 0.2).timeout.connect(
+		get_tree().create_timer(TOTAL_POUR + 0.2).timeout.connect(
 			func(): _show_lose(tr("LOSE")))
 	elif not board.has_any_move():
 		finished = true
-		get_tree().create_timer(POUR_TIME + 0.2).timeout.connect(
+		get_tree().create_timer(TOTAL_POUR + 0.2).timeout.connect(
 			func(): _show_lose(tr("STUCK")))
 
 
@@ -281,6 +336,7 @@ func _show_win(stars: int) -> void:
 	sv.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(sv)
 	sv.animate_in()
+	_burst_stars.call_deferred(sv, stars)
 	box.add_child(UI.label(tr("WIN_MOVES") % board.moves, 28, Palette.TEXT_DIM))
 	if level_index + 1 < GameState.level_count():
 		box.add_child(UI.accent_button(tr("NEXT"), _go_next))
@@ -288,6 +344,17 @@ func _show_win(stars: int) -> void:
 		box.add_child(UI.label(tr("ALL_DONE"), 30))
 	box.add_child(UI.button(tr("REPLAY"), _load_level))
 	box.add_child(UI.button(tr("LEVELS"), func(): _main.show_levels()))
+
+
+func _burst_stars(sv: StarsView, stars: int) -> void:
+	await get_tree().process_frame
+	for i in stars:
+		await get_tree().create_timer(0.2).timeout
+		if not is_instance_valid(sv):
+			return
+		var step := sv.size.x / sv.total
+		_fx.burst(sv.global_position + Vector2(step * (i + 0.5), sv.size.y * 0.5),
+			Palette.ACCENT)
 
 
 func _go_next() -> void:

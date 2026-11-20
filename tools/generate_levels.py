@@ -140,9 +140,10 @@ def difficulty_for(index):
 
 
 def star_thresholds(par):
-    three = par
-    two = par + max(2, round(par * 0.2))
-    limit = par + max(4, round(par * 0.45))
+    # Casual-friendly: 3 stars allow a small margin over the optimum.
+    three = par + max(1, round(par * 0.1))
+    two = par + max(3, round(par * 0.3))
+    limit = par + max(5, round(par * 0.5))
     return three, two, limit
 
 

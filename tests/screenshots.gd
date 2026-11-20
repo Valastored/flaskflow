@@ -17,23 +17,27 @@ func _initialize() -> void:
 	main.show_game(45)
 	await process_frame
 	g = main.current_screen()
+	await create_timer(1.2).timeout
 	g.play_move(0, 9)
-	await create_timer(0.1).timeout
-	await _shot("game_lvl46_pouring")
+	await create_timer(0.22).timeout
+	await _shot("game_lvl46_pouring", 1)
 	var sols = JSON.parse_string(FileAccess.get_file_as_string("res://tests/solutions.json"))
 	main.show_game(0)
 	await process_frame
 	g = main.current_screen()
+	await create_timer(1.0).timeout
 	for mv in sols[0]["moves"]:
 		g.play_move(int(mv[0]), int(mv[1]))
-	await create_timer(1.6).timeout
+		await create_timer(0.7).timeout
+	await _shot("confetti", 1)
+	await create_timer(1.4).timeout
 	await _shot("win")
 	root.get_node("GameState").reset_progress()
 	quit()
 
 
-func _shot(name: String) -> void:
-	for i in 20:
+func _shot(name: String, frames: int = 20) -> void:
+	for i in frames:
 		await process_frame
 	var img := root.get_texture().get_image()
 	img.save_png("res://tests/shots/%s.png" % name)

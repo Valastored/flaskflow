@@ -3,9 +3,9 @@
 Puzzle de tri de liquides pour Android, fait avec **Godot 4.5**.
 Twist : **coups limités + étoiles**. Le nombre minimal de coups de chaque niveau est calculé par un solveur, et les étoiles sont attribuées en fonction.
 
-| Menu | Jeu | Niveau avancé | Victoire |
+| Menu | Versement | Tube complété | Victoire |
 |---|---|---|---|
-| ![](docs/menu.png) | ![](docs/game_lvl1.png) | ![](docs/game_lvl46_pouring.png) | ![](docs/win.png) |
+| ![](docs/menu.png) | ![](docs/game_lvl46_pouring.png) | ![](docs/confetti.png) | ![](docs/win.png) |
 
 ## Lancer le projet (Mac et PC)
 
@@ -33,8 +33,8 @@ tests/run_tests.gd          tests automatiques (règles + parties jouées via l'
 - Un tube contient 4 couches.
 - On peut verser sur la même couleur ou dans un tube vide. Toutes les couches du dessus de cette couleur partent ensemble, dans la limite de la place disponible.
 - Chaque niveau a une **limite de coups**. Les étoiles se gagnent ainsi :
-  - 3 ★ en faisant le nombre optimal de coups,
-  - 2 ★ avec une petite marge,
+  - 3 ★ au nombre optimal de coups, avec une petite marge (+1 environ),
+  - 2 ★ avec une marge plus grande,
   - 1 ★ si le niveau est simplement réussi.
 - **Boosters** : 3 « annuler » par niveau, puis +3 contre une pub récompensée. Quand il n'y a plus de coups, une pub récompensée donne « +5 coups » (une fois par niveau).
 
