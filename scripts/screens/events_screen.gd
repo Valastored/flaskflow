@@ -233,6 +233,7 @@ func _claim(button: Control, reward: Dictionary) -> void:
 	if reward.is_empty():
 		return
 	var at := button.get_global_rect().get_center()
+	Sfx.play("reward")
 	_fx.burst(at, Palette.ACCENT, 18)
 	_fx.sparkle(at, Palette.GOOD, 24)
 	_rebuild()

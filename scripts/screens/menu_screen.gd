@@ -55,9 +55,30 @@ func _ready() -> void:
 		ads_btn = UI.button(tr("ADS_REMOVED"), func(): pass, 28)
 		ads_btn.disabled = true
 	else:
-		ads_btn = UI.button(tr("REMOVE_ADS"), _buy_no_ads, 28)
+		var price := Ads.remove_ads_price()
+		var text := tr("REMOVE_ADS_PRICE") % price if price != "" else tr("REMOVE_ADS")
+		ads_btn = UI.button(text, _buy_no_ads, 28)
 	box.add_child(ads_btn)
-	box.add_child(UI.button(tr("LANGUAGE"), func(): I18n.toggle(), 26))
+
+	var settings := HBoxContainer.new()
+	settings.add_theme_constant_override("separation", 14)
+	var sound := UI.button(tr("SOUND_ON") if Sfx.enabled() else tr("SOUND_OFF"),
+		func(): pass, 24)
+	sound.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sound.pressed.connect(func():
+		Sfx.set_enabled(not Sfx.enabled())
+		sound.text = tr("SOUND_ON") if Sfx.enabled() else tr("SOUND_OFF")
+		Sfx.play("click"))
+	settings.add_child(sound)
+	var lang := UI.button(tr("LANGUAGE"), func(): I18n.toggle(), 24)
+	lang.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings.add_child(lang)
+	box.add_child(settings)
+
+	var restore := UI.button(tr("RESTORE"), func(): Ads.restore_purchases(), 20)
+	restore.flat = true
+	restore.add_theme_color_override("font_color", Palette.TEXT_DIM)
+	box.add_child(restore)
 
 
 ## Pulsing red dot: something to claim in Events.
@@ -78,5 +99,5 @@ func _badge() -> Control:
 
 
 func _buy_no_ads() -> void:
+	# The menu refreshes itself through Ads.no_ads_changed once the purchase is done.
 	Ads.purchase_remove_ads()
-	_main.show_menu()

@@ -76,8 +76,17 @@ func _test_events() -> void:
 	check(gs.chests_available() == 1, "chest at 15 stars")
 	check(gs.claim_chest() == gs.CHEST_REWARD and gs.chests_available() == 0, "chest claimed")
 	check(gs.use_item("tube") and gs.item_count("tube") == 3, "use item")
+	# Monetisation (simulated outside Android).
+	var ads = root.get_node("Ads")
+	check(ads.is_simulated(), "ads simulated on desktop")
+	var got := [false]
+	ads.show_rewarded(func(ok): got[0] = ok)
+	check(got[0], "simulated rewarded grants reward")
 	gs.reset_all()
-	print("events & power-ups: ok")
+	ads.purchase_remove_ads()
+	check(gs.no_ads(), "remove ads purchase (simulated)")
+	gs.reset_all()
+	print("events & power-ups & ads: ok")
 
 
 func _test_levels_valid() -> void:

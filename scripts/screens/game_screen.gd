@@ -168,15 +168,18 @@ func _on_tube_tapped(i: int) -> void:
 		_selected = -1
 		if not _try_select(i, false):
 			_views[i].shake()
+			Sfx.play("invalid")
 
 
 func _try_select(i: int, shake_on_fail: bool = true) -> bool:
 	if board.tubes[i].is_empty() or board.is_tube_complete(i):
 		if shake_on_fail:
 			_views[i].shake()
+			Sfx.play("invalid")
 		return false
 	_selected = i
 	_views[i].set_selected(true)
+	Sfx.play("select", 1.0, 0.06)
 	return true
 
 
@@ -218,6 +221,7 @@ func _do_pour(from: int, to: int) -> void:
 		src.play_drain(color, k, POUR_TIME)
 		dst.set_layers(board.tubes[to], board.is_tube_complete(to))
 		dst.play_fill(k, POUR_TIME)
+		Sfx.play("pour", 1.15 - 0.08 * level_before, 0.05)
 		_fx.start_stream(src.lip_global(dir), dst.surface_global(level_before),
 			color, 12.0, POUR_TIME))
 	tw.tween_interval(POUR_TIME)
@@ -236,6 +240,7 @@ func _after_pour(from: int, to: int, color: Color) -> void:
 	dst.set_layers(board.tubes[to], board.is_tube_complete(to))
 	if board.is_tube_complete(to):
 		dst.play_complete()
+		Sfx.play("pop", 1.0, 0.05)
 		_fx.sparkle(dst.mouth_global_rest(), color)
 	if board.is_solved() and _busy == 0:
 		_celebrate()
@@ -243,6 +248,7 @@ func _after_pour(from: int, to: int, color: Color) -> void:
 
 func _celebrate() -> void:
 	_fx.confetti()
+	Sfx.play("win")
 	for i in _views.size():
 		if not (board.tubes[i] as Array).is_empty():
 			_views[i].bounce(0.2, i * 0.06)
@@ -411,6 +417,7 @@ func _burst_stars(sv: StarsView, stars: int) -> void:
 		if not is_instance_valid(sv):
 			return
 		var step := sv.size.x / sv.total
+		Sfx.play("star", 1.0 + 0.12 * i)
 		_fx.burst(sv.global_position + Vector2(step * (i + 0.5), sv.size.y * 0.5),
 			Palette.ACCENT)
 
@@ -421,6 +428,7 @@ func _go_next() -> void:
 
 
 func _show_lose(message: String) -> void:
+	Sfx.play("lose")
 	var box := _popup()
 	box.add_child(UI.label(message, 48, Palette.BAD))
 	if not extra_moves_used and board.moves >= move_limit:

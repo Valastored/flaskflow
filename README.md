@@ -22,7 +22,10 @@ scripts/board.gd            logique pure du jeu (verser, annuler, victoire)
 scripts/autoload/
   game_state.gd             niveaux + sauvegarde (user://save.json)
   i18n.gd                   textes FR / EN (langue du téléphone par défaut)
-  ads.gd                    pubs + achat « sans pub », SIMULÉS pour l'instant
+  ads.gd                    AdMob + Google Play Billing (simulés sur PC)
+  sfx.gd                    effets sonores
+addons/                     plugins AdMob et Google Play Billing
+assets/sfx/                 sons générés par tools/generate_sfx.py
 scripts/screens/            menu, sélection des niveaux, écran de jeu
 scripts/ui/                 dessin des tubes, étoiles, thème, palette
 tests/run_tests.gd          tests automatiques (règles + parties jouées via l'UI)
@@ -66,16 +69,74 @@ Arguments : nombre de niveaux, graine aléatoire, puis fichier de solutions pour
 godot --headless --path . -s tests/run_tests.gd
 ```
 
-## Monétisation (étape suivante)
+## Son
 
-Pour l'instant, `scripts/autoload/ads.gd` simule tout. Le jeu appelle seulement ces fonctions :
+Les effets sonores sont **générés par code** avec `tools/generate_sfx.py` : versement, bouchon, sélection, erreur, victoire, étoiles, récompense, défaite. Il n'y a donc aucun fichier audio à acheter ni aucune licence à gérer. Pour modifier un son, change sa fonction dans le script, puis relance :
 
-- `Ads.on_level_completed()` : affiche un interstitiel tous les 3 niveaux, sauf si l'achat « sans pub » a été fait.
-- `Ads.show_rewarded(callback)` : pub récompensée (annulations, +5 coups). Elle reste disponible même après l'achat « sans pub », parce que c'est le joueur qui choisit de la regarder.
-- `Ads.purchase_remove_ads()` : achat non consommable « remove_ads ».
+```bash
+python3 tools/generate_sfx.py
+```
 
-À faire : brancher le plugin AdMob pour Godot et le plugin Google Play Billing, valider l'achat (acknowledge sous 3 jours), ajouter « Restaurer les achats » et le consentement RGPD (UMP).
+On joue un son avec `Sfx.play("pour")`. Le son peut être coupé ou activé depuis le menu.
+
+## Monétisation : AdMob + Google Play Billing
+
+Les deux plugins officiels sont **déjà inclus** dans `addons/` et activés :
+
+- AdMob v7.0 (`godot-sdk-integrations/godot-admob`)
+- Google Play Billing 3.3.0 (`godot-sdk-integrations/godot-google-play-billing`)
+
+Tout le code de monétisation se trouve dans `scripts/autoload/ads.gd`.
+
+| | Sur PC / dans l'éditeur | Sur Android |
+|---|---|---|
+| Pubs | simulées (récompense donnée tout de suite) | vraies pubs AdMob (de **test** par défaut) |
+| Achat « sans pub » | simulé | vrai achat Google Play |
+
+Ce qui est en place :
+
+- **Interstitiel** tous les 3 niveaux, sauf si le joueur a acheté « sans pub ».
+- **Pub récompensée** pour +1 tube, +3 annulations ou +5 coups.
+- **Consentement RGPD** : le formulaire Google UMP s'affiche avant toute pub dans l'UE.
+- **Achat « remove_ads »** :
+  - il est validé (acknowledge) automatiquement,
+  - il est restauré au lancement,
+  - un bouton « Restaurer les achats » est présent dans le menu,
+  - le prix affiché est le prix local renvoyé par Google.
+
+### Étape 1 : tester sur ton téléphone (pubs de test)
+
+1. Dans Godot, va dans **Projet → Installer le modèle de compilation Android**. Il est nécessaire parce que les plugins utilisent la compilation Gradle.
+2. Dans **Éditeur → Paramètres de l'éditeur → Export → Android**, renseigne le SDK Android (celui d'Android Studio) et un keystore de debug.
+3. Branche ton téléphone, puis clique sur l'icône Android en haut à droite.
+
+Tu dois voir des pubs marquées **« Test Ad »**. C'est normal et sans risque.
+
+### Étape 2 : créer tes vrais identifiants AdMob
+
+1. Sur [admob.google.com](https://admob.google.com), ajoute une application Android, puis crée 2 blocs d'annonces : **Interstitiel** et **Avec récompense**.
+2. Dans `addons/AdmobPlugin/android_export.cfg`, mets ton **App ID** dans `[Release]` et passe `is_real = true`.
+3. Dans `scripts/autoload/ads.gd`, passe `USE_REAL_ADS = true` et colle tes 2 IDs de blocs d'annonces.
+4. ⚠️ Ne clique jamais sur tes propres vraies pubs : AdMob peut suspendre ton compte. Pour tester, garde les pubs de test.
+
+### Étape 3 : l'achat « sans pub » dans la Play Console
+
+1. Crée l'application dans la Play Console, avec le package `com.valastor.flaskflow`, celui défini dans `export_presets.cfg`.
+2. Envoie un premier build AAB en **test interne**. La facturation ne s'active qu'après ce premier envoi.
+3. Va dans **Monétiser → Produits → Produits intégrés** et crée le produit `remove_ads`. Donne-lui un prix, par exemple 2,99 €, puis **active**-le.
+4. Ajoute ton compte Google dans **Paramètres → Test de licence**, pour acheter en mode test sans être débité.
 
 ## Export Android
 
-Dans Godot : **Éditeur → Gérer les modèles d'export → Télécharger**. Ensuite, **Projet → Exporter → Ajouter… → Android**. Il faut le SDK Android, que tu as déjà avec Android Studio, et un keystore de release. Pour le Play Store, exporte en **AAB**.
+Le preset Android est déjà configuré dans `export_presets.cfg` :
+
+- compilation Gradle,
+- format AAB,
+- permissions Internet,
+- package `com.valastor.flaskflow` (définitif une fois publié).
+
+Il te reste trois choses à faire :
+
+1. Télécharge les modèles d'export : **Éditeur → Gérer les modèles d'export**.
+2. Installe le modèle de compilation Android : **Projet → Installer le modèle de compilation Android**.
+3. Renseigne ton **keystore de release** dans **Projet → Exporter → Android**. Ne le perds jamais : sans lui, tu ne peux plus mettre à jour l'application.

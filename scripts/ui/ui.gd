@@ -38,6 +38,7 @@ static func button(text: String, on_press: Callable, font_size: int = 32) -> But
 	var b := Button.new()
 	b.text = text
 	b.add_theme_font_size_override("font_size", font_size)
+	b.pressed.connect(func(): Sfx.play("click", 1.0, 0.05))
 	b.pressed.connect(on_press)
 	return b
 

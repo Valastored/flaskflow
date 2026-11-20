@@ -12,6 +12,10 @@ var _current: Control
 func _ready() -> void:
 	theme = UI.make_theme()
 	I18n.locale_changed.connect(show_menu)
+	Ads.notice.connect(toast)
+	Ads.no_ads_changed.connect(func():
+		if _current is MenuScreen:
+			show_menu())
 	show_menu()
 
 
@@ -57,6 +61,32 @@ func show_events() -> void:
 
 func show_game(level_index: int) -> void:
 	_swap(GameScreen.new(self, level_index))
+
+
+## Small message at the bottom of the screen.
+func toast(text: String) -> void:
+	var panel := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0.8)
+	sb.set_corner_radius_all(20)
+	sb.content_margin_left = 24
+	sb.content_margin_right = 24
+	sb.content_margin_top = 14
+	sb.content_margin_bottom = 14
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.z_index = 100
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := UI.label(text, 24)
+	l.custom_minimum_size = Vector2(560, 0)
+	panel.add_child(l)
+	add_child(panel)
+	panel.position = Vector2((size.x - 608) * 0.5, size.y - 150)
+	panel.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(panel, "modulate:a", 1.0, 0.2)
+	tw.tween_interval(2.4)
+	tw.tween_property(panel, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(panel.queue_free)
 
 
 func current_screen() -> Control:

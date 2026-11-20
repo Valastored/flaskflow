@@ -54,6 +54,7 @@ func _default_data() -> Dictionary:
 		"daily": {"last_claim": "", "streak": 0},
 		"missions": {"date": "", "progress": {}, "claimed": []},
 		"chests_claimed": 0,
+		"sound": true,
 	}
 
 
