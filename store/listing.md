@@ -53,8 +53,6 @@ De 3 à 10 couleurs, des premiers niveaux tout doux jusqu'aux vrais casse-têtes
 
 ✨ AGRÉABLE À JOUER
 Animations fluides, effets sonores doux, couleurs bien distinctes, et aucune limite de temps : joue à ton rythme, même hors ligne.
-
-Le jeu est gratuit et contient des publicités. Un achat unique permet de supprimer les publicités imposées.
 ```
 
 ---
@@ -98,8 +96,6 @@ From 3 to 10 colors, from gentle first steps to real brain teasers, with calmer 
 
 ✨ A JOY TO PLAY
 Smooth animations, soft sound effects, clearly distinct colors and no timer: play at your own pace, even offline.
-
-The game is free and contains ads. A one-time purchase removes forced ads.
 ```
 
 ---
