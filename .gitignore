@@ -6,3 +6,6 @@ export.cfg
 *.keystore
 # Test output
 tests/shots/
+android/
+build/
+signing/
