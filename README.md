@@ -3,9 +3,9 @@
 Puzzle de tri de liquides pour Android, fait avec **Godot 4.5**.
 Twist : **coups limités + étoiles**. Le nombre minimal de coups de chaque niveau est calculé par un solveur, et les étoiles sont attribuées en fonction.
 
-| Menu | Versement | Tube complété | Victoire |
-|---|---|---|---|
-| ![](docs/menu.png) | ![](docs/game_lvl46_pouring.png) | ![](docs/confetti.png) | ![](docs/win.png) |
+| Menu | Versement | Tube complété | Tube en plus | Événements |
+|---|---|---|---|---|
+| ![](docs/menu.png) | ![](docs/game_lvl46_pouring.png) | ![](docs/confetti.png) | ![](docs/extra_tube.png) | ![](docs/events.png) |
 
 ## Lancer le projet (Mac et PC)
 
@@ -36,7 +36,21 @@ tests/run_tests.gd          tests automatiques (règles + parties jouées via l'
   - 3 ★ au nombre optimal de coups, avec une petite marge (+1 environ),
   - 2 ★ avec une marge plus grande,
   - 1 ★ si le niveau est simplement réussi.
-- **Boosters** : 3 « annuler » par niveau, puis +3 contre une pub récompensée. Quand il n'y a plus de coups, une pub récompensée donne « +5 coups » (une fois par niveau).
+- **Boosters** :
+  - 3 « annuler » gratuits par niveau. Ensuite, +3 avec un power-up, ou en regardant une pub récompensée.
+  - **+1 tube vide**, une fois par niveau, avec un power-up ou une pub. Il est aussi proposé quand le joueur est bloqué.
+  - « +5 coups » contre une pub, quand il n'y a plus de coups (une fois par niveau).
+
+## Événements et power-ups
+
+Il y a deux power-ups, `tube` et `undo` (+3 annulations). Ils sont stockés dans la sauvegarde, et le joueur en a 1 de chaque au départ.
+
+- **Récompense quotidienne** : un calendrier de 7 jours, dont les récompenses augmentent chaque jour. Si le joueur rate un jour, il recommence au jour 1.
+- **Missions du jour** : gagner 3 niveaux, gagner 7 étoiles, finir un niveau avec 3 étoiles sans annuler. Elles se remettent à zéro chaque jour.
+- **Coffre à étoiles** : un coffre toutes les 15 étoiles.
+- Un point rouge s'affiche sur le bouton « Événements » du menu quand quelque chose est à récupérer.
+
+Les récompenses et les objectifs se règlent en haut de `scripts/autoload/game_state.gd` (`DAILY_REWARDS`, `MISSIONS`, `CHEST_STARS`).
 
 ## Générer plus de niveaux
 

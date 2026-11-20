@@ -45,6 +45,10 @@ func _ready() -> void:
 	play.custom_minimum_size = Vector2(0, 100)
 	box.add_child(play)
 	box.add_child(UI.button(tr("LEVELS"), func(): _main.show_levels()))
+	var events := UI.button(tr("EVENTS"), func(): _main.show_events())
+	if GameState.has_claimable():
+		events.add_child(_badge())
+	box.add_child(events)
 
 	var ads_btn: Button
 	if GameState.no_ads():
@@ -54,6 +58,23 @@ func _ready() -> void:
 		ads_btn = UI.button(tr("REMOVE_ADS"), _buy_no_ads, 28)
 	box.add_child(ads_btn)
 	box.add_child(UI.button(tr("LANGUAGE"), func(): I18n.toggle(), 26))
+
+
+## Pulsing red dot: something to claim in Events.
+func _badge() -> Control:
+	var dot := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.BAD
+	sb.set_corner_radius_all(14)
+	dot.add_theme_stylebox_override("panel", sb)
+	dot.size = Vector2(28, 28)
+	dot.position = Vector2(470, -6)
+	dot.pivot_offset = Vector2(14, 14)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tw := dot.create_tween().set_loops()
+	tw.tween_property(dot, "scale", Vector2(1.25, 1.25), 0.5)
+	tw.tween_property(dot, "scale", Vector2.ONE, 0.5)
+	return dot
 
 
 func _buy_no_ads() -> void:

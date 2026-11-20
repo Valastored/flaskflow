@@ -16,6 +16,8 @@ var thresholds: Array  # [moves for 3 stars, moves for 2 stars]
 var undos_left: int = START_UNDOS
 var finished := false
 var extra_moves_used := false
+var extra_tube_used := false
+var used_undo := false
 
 var _main
 var _views: Array[TubeView] = []
@@ -23,6 +25,7 @@ var _selected := -1
 var _moves_label: Label
 var _stars_preview: StarsView
 var _undo_btn: Button
+var _tube_btn: Button
 var _tubes_box: VBoxContainer
 var _overlay: Control
 var _fx: FxLayer
@@ -53,6 +56,8 @@ func _load_level() -> void:
 	undos_left = START_UNDOS
 	finished = false
 	extra_moves_used = false
+	extra_tube_used = false
+	used_undo = false
 	_selected = -1
 	_busy = 0
 	if _overlay:
@@ -104,14 +109,19 @@ func _build_ui() -> void:
 	# Bottom bar.
 	var bottom := HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	_undo_btn = UI.button("", _on_undo, 30)
-	_undo_btn.custom_minimum_size = Vector2(320, 90)
+	bottom.add_theme_constant_override("separation", 20)
+	_undo_btn = UI.button("", _on_undo, 28)
+	_undo_btn.custom_minimum_size = Vector2(300, 90)
 	bottom.add_child(_undo_btn)
+	_tube_btn = UI.button("", _on_extra_tube, 28)
+	_tube_btn.custom_minimum_size = Vector2(300, 90)
+	bottom.add_child(_tube_btn)
 	col.add_child(bottom)
 
 
-func _build_tubes() -> void:
+func _build_tubes(animate_from: int = 0) -> void:
 	for c in _tubes_box.get_children():
+		_tubes_box.remove_child(c)
 		c.queue_free()
 	_views.clear()
 	var n := board.tube_count()
@@ -134,7 +144,8 @@ func _build_tubes() -> void:
 		v.tapped.connect(_on_tube_tapped)
 		row.add_child(v)
 		_views.append(v)
-		v.drop_in(0.05 + i * 0.04)
+		if i >= animate_from:
+			v.drop_in(0.05 + (i - animate_from) * 0.04)
 
 
 # ---------------------------------------------------------------- input
@@ -241,19 +252,53 @@ func _on_undo() -> void:
 	if finished or _busy > 0:
 		return
 	if undos_left <= 0:
-		Ads.show_rewarded(func(ok: bool):
-			if ok:
-				undos_left += 3
-				_refresh_hud())
+		# Out of free undos: use a power-up, otherwise a rewarded ad.
+		if GameState.use_item("undo"):
+			undos_left += 3
+			_refresh_hud()
+		else:
+			Ads.show_rewarded(func(ok: bool):
+				if ok:
+					undos_left += 3
+					_refresh_hud())
 		return
 	if board.undo():
 		undos_left -= 1
+		used_undo = true
 		if _selected != -1:
 			_views[_selected].set_selected(false)
 			_selected = -1
 		for i in _views.size():
 			_views[i].set_layers(board.tubes[i], board.is_tube_complete(i))
 		_refresh_hud()
+
+
+## +1 empty tube, once per level: power-up if the player has one, else an ad.
+func _on_extra_tube() -> void:
+	if extra_tube_used or _busy > 0 or board.is_solved() or board.moves >= move_limit:
+		return
+	if GameState.use_item("tube"):
+		_add_tube()
+	else:
+		Ads.show_rewarded(func(ok: bool):
+			if ok:
+				_add_tube())
+
+
+func _add_tube() -> void:
+	extra_tube_used = true
+	if _selected != -1:
+		_views[_selected].set_selected(false)
+		_selected = -1
+	board.add_empty_tube()
+	_build_tubes(board.tube_count() - 1)
+	# If the player was stuck, the new tube unblocks the level.
+	if finished and not board.is_solved() and board.moves < move_limit:
+		finished = false
+		if _overlay:
+			_overlay.queue_free()
+			_overlay = null
+	_refresh_hud()
 
 
 # ---------------------------------------------------------------- state
@@ -270,14 +315,26 @@ func _refresh_hud() -> void:
 	_moves_label.text = tr("MOVES") % [board.moves, move_limit]
 	var left := move_limit - board.moves
 	_moves_label.add_theme_color_override("font_color",
-		Color("#ff4d6d") if left <= 3 else Palette.TEXT)
+		Palette.BAD if left <= 3 else Palette.TEXT)
 	_stars_preview.count = current_stars()
 	if undos_left > 0:
 		_undo_btn.text = tr("UNDO") % undos_left
 		_undo_btn.disabled = not board.can_undo()
+	elif GameState.item_count("undo") > 0:
+		_undo_btn.text = tr("UNDO_ITEM") % GameState.item_count("undo")
+		_undo_btn.disabled = false
 	else:
 		_undo_btn.text = tr("UNDO_AD")
 		_undo_btn.disabled = false
+	if extra_tube_used:
+		_tube_btn.text = tr("TUBE_USED")
+		_tube_btn.disabled = true
+	elif GameState.item_count("tube") > 0:
+		_tube_btn.text = tr("TUBE_BTN") % GameState.item_count("tube")
+		_tube_btn.disabled = false
+	else:
+		_tube_btn.text = tr("TUBE_AD")
+		_tube_btn.disabled = false
 
 
 func _check_end() -> void:
@@ -285,6 +342,7 @@ func _check_end() -> void:
 		finished = true
 		var stars := current_stars()
 		GameState.record_result(level_index, stars)
+		GameState.on_level_won(stars, used_undo)
 		get_tree().create_timer(TOTAL_POUR + 0.9).timeout.connect(
 			func(): _show_win(stars))
 	elif board.moves >= move_limit:
@@ -364,9 +422,14 @@ func _go_next() -> void:
 
 func _show_lose(message: String) -> void:
 	var box := _popup()
-	box.add_child(UI.label(message, 48, Color("#ff4d6d")))
+	box.add_child(UI.label(message, 48, Palette.BAD))
 	if not extra_moves_used and board.moves >= move_limit:
 		box.add_child(UI.accent_button(tr("MORE_MOVES"), _extra_moves))
+	elif not extra_tube_used and board.moves < move_limit:
+		# Stuck: an extra tube is the natural rescue.
+		var label := tr("TUBE_BTN") % GameState.item_count("tube") \
+			if GameState.item_count("tube") > 0 else tr("TUBE_AD")
+		box.add_child(UI.accent_button(label, _on_extra_tube))
 	box.add_child(UI.button(tr("RESTART"), _load_level))
 	box.add_child(UI.button(tr("LEVELS"), func(): _main.show_levels()))
 

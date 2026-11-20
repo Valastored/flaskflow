@@ -110,6 +110,14 @@ func has_any_move() -> bool:
 	return false
 
 
+## Booster: adds an empty tube. Also added to the undo history so that
+## undoing never removes it.
+func add_empty_tube() -> void:
+	tubes.append([])
+	for snap in _history:
+		snap.append([])
+
+
 func _snapshot() -> Array:
 	var copy: Array = []
 	for t in tubes:

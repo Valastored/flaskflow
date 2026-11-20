@@ -4,6 +4,7 @@ extends Control
 const MenuScreen := preload("res://scripts/screens/menu_screen.gd")
 const LevelSelectScreen := preload("res://scripts/screens/level_select_screen.gd")
 const GameScreen := preload("res://scripts/screens/game_screen.gd")
+const EventsScreen := preload("res://scripts/screens/events_screen.gd")
 
 var _current: Control
 
@@ -28,7 +29,7 @@ func _notification(what: int) -> void:
 		# Android back button.
 		if _current is GameScreen:
 			show_levels()
-		elif _current is LevelSelectScreen:
+		elif _current is LevelSelectScreen or _current is EventsScreen:
 			show_menu()
 
 
@@ -48,6 +49,10 @@ func show_menu() -> void:
 
 func show_levels() -> void:
 	_swap(LevelSelectScreen.new(self))
+
+
+func show_events() -> void:
+	_swap(EventsScreen.new(self))
 
 
 func show_game(level_index: int) -> void:
