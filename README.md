@@ -69,6 +69,16 @@ Arguments : nombre de niveaux, graine aléatoire, puis fichier de solutions pour
 godot --headless --path . -s tests/run_tests.gd
 ```
 
+## Icônes
+
+Toutes les icônes viennent d'un seul dessin, dans `tools/generate_icons.py`. Pour les regénérer (il faut `pip install cairosvg`) :
+
+```bash
+python3 tools/generate_icons.py
+```
+
+Le script produit l'icône du Play Store (`assets/icon/store_512.png`) et les icônes Android, y compris les icônes adaptatives et monochromes.
+
 ## Son
 
 Les effets sonores sont **générés par code** avec `tools/generate_sfx.py` : versement, bouchon, sélection, erreur, victoire, étoiles, récompense, défaite. Il n'y a donc aucun fichier audio à acheter ni aucune licence à gérer. Pour modifier un son, change sa fonction dans le script, puis relance :
