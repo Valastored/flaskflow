@@ -16,7 +16,7 @@ Twist : **coups limités + étoiles**. Le nombre minimal de coups de chaque nive
 ## Structure
 
 ```
-data/levels.json            50 niveaux générés (couleurs, coups optimaux, seuils d'étoiles)
+data/levels.json            200 niveaux générés (couleurs, coups optimaux, seuils d'étoiles)
 tools/generate_levels.py    générateur + solveur A* (optimal) → levels.json
 scripts/board.gd            logique pure du jeu (verser, annuler, victoire)
 scripts/autoload/
@@ -58,7 +58,7 @@ Les récompenses et les objectifs se règlent en haut de `scripts/autoload/game_
 ## Générer plus de niveaux
 
 ```bash
-python3 tools/generate_levels.py 100 2026 tests/solutions.json > data/levels.json
+python3 tools/generate_levels.py 200 2026 tests/solutions.json > data/levels.json
 ```
 
 Arguments : nombre de niveaux, graine aléatoire, puis fichier de solutions pour les tests. La difficulté se règle dans `difficulty_for()` (nombre de couleurs selon le niveau) et dans `star_thresholds()`.

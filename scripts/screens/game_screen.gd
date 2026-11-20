@@ -128,7 +128,7 @@ func _build_tubes(animate_from: int = 0) -> void:
 	var rows := ceili(float(n) / MAX_PER_ROW)
 	var per_row := ceili(float(n) / rows)
 	var tube_w := clampf(600.0 / per_row, 70.0, 110.0)
-	var tube_h := 330.0 if rows == 1 else 280.0
+	var tube_h := 330.0 if rows == 1 else (280.0 if rows == 2 else 215.0)
 	var row: HBoxContainer
 	for i in n:
 		if i % per_row == 0:

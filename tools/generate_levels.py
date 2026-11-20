@@ -123,20 +123,18 @@ def random_level(rng, ncolors, nempty):
 
 
 def difficulty_for(index):
-    """Level index (0-based) -> (colors, empty tubes)."""
-    if index < 3:
-        return 3, 2
-    if index < 8:
-        return 4, 2
-    if index < 15:
-        return 5, 2
-    if index < 25:
-        return 6, 2
-    if index < 35:
-        return 7, 2
-    if index < 45:
-        return 8, 2
-    return 9, 2
+    """Level index (0-based) -> (colors, empty tubes).
+    Difficulty ramps up, with an easier "breather" level every 5 levels
+    after level 20 so the curve feels like waves, not a wall."""
+    steps = [(3, 3), (8, 4), (15, 5), (25, 6), (40, 7), (65, 8), (100, 9)]
+    colors = 10
+    for limit, c in steps:
+        if index < limit:
+            colors = c
+            break
+    if index >= 20 and (index + 1) % 5 == 0:
+        colors = max(4, colors - 2)
+    return colors, 2
 
 
 def star_thresholds(par):
