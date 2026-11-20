@@ -45,6 +45,7 @@ var _retry_delay := 2.0
 
 var _billing: BillingClient
 var _price := ""  # localised price from Google Play, e.g. "2,99 €"
+var _pending_purchase := false  # purchase asked before product details were loaded
 
 
 func _ready() -> void:
@@ -196,7 +197,7 @@ func _setup_billing() -> void:
 	_billing = BillingClient.new()
 	add_child(_billing)
 	_billing.connected.connect(_on_billing_connected)
-	_billing.connect_error.connect(func(code, msg): print("[Billing] connect error ", code, " ", msg))
+	_billing.connect_error.connect(_on_billing_connect_error)
 	_billing.query_product_details_response.connect(_on_product_details)
 	_billing.query_purchases_response.connect(_on_purchases_query)
 	_billing.on_purchase_updated.connect(_on_purchase_updated)
@@ -210,8 +211,21 @@ func _on_billing_connected() -> void:
 	_billing.query_purchases(BillingClient.ProductType.INAPP)
 
 
+func _on_billing_connect_error(code, msg) -> void:
+	print("[Billing] connect error ", code, " ", msg)
+	if _pending_purchase:
+		_pending_purchase = false
+		notice.emit(tr("STORE_UNAVAILABLE"))
+	get_tree().create_timer(10.0).timeout.connect(func():
+		if not _billing.is_ready(): _billing.start_connection())
+
+
 func _on_product_details(result: Dictionary) -> void:
+	print("[Billing] product details ", result.get("response_code", -1), " ", result.get("debug_message", ""), " ", result.get("product_details", []).size())
 	if int(result.get("response_code", -1)) != RC_OK:
+		if _pending_purchase:
+			_pending_purchase = false
+			notice.emit(tr("STORE_UNAVAILABLE"))
 		return
 	for p in result.get("product_details", []):
 		if p.get("product_id", "") == REMOVE_ADS_PRODUCT:
@@ -219,6 +233,12 @@ func _on_product_details(result: Dictionary) -> void:
 			if offers is Array and not offers.is_empty():
 				_price = str(offers[0].get("formatted_price", ""))
 				no_ads_changed.emit()
+	if _pending_purchase:
+		_pending_purchase = false
+		if _price == "":
+			notice.emit(tr("STORE_UNAVAILABLE"))
+		else:
+			_launch_purchase()
 
 
 ## Localised price ("2,99 €"), or "" if unknown (simulation / not loaded yet).
@@ -234,10 +254,21 @@ func purchase_remove_ads() -> void:
 		_grant_no_ads()
 		return
 	if not _billing.is_ready():
-		notice.emit(tr("STORE_UNAVAILABLE"))
+		# Reconnect, then the purchase starts once the product is loaded.
+		_pending_purchase = true
 		_billing.start_connection()
 		return
+	if _price == "":
+		# Product details not loaded yet: the plugin can't buy without them.
+		_pending_purchase = true
+		_billing.query_product_details([REMOVE_ADS_PRODUCT], BillingClient.ProductType.INAPP)
+		return
+	_launch_purchase()
+
+
+func _launch_purchase() -> void:
 	var res: Dictionary = _billing.purchase(REMOVE_ADS_PRODUCT)
+	print("[Billing] purchase ", res)
 	if int(res.get("response_code", -1)) != RC_OK:
 		notice.emit(tr("STORE_UNAVAILABLE"))
 
